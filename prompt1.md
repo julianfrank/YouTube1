@@ -1,6 +1,9 @@
 # YouTube1
 First Try for YouTube
 
+## Github Location : https://github.com/julianfrank/YouTube1
+
+## Prompt
 
 Build a HTML5 web page as a single HTML file that lets high school kids to test their basic math skills tested on a regular basis. 
 The solution will have two different users : kid and parent. 
@@ -20,3 +23,4 @@ The user stories for each are as follows:
 12. Ensure that in multiplication the maximum result should be less than 100 
 13. In the result reports show correct answers in red and incorrect answers in green
 14. For the parent give and option to clear the localstore
+15. The Test should be fixed for 5 minutes
