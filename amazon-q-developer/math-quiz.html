@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Skills Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        .question-container, .results-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .navigation {
+            margin: 20px 0;
+        }
+        .answer-input {
+            padding: 5px;
+            font-size: 16px;
+            width: 100px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Math Skills Practice</h1>
+        <div>
+            <button onclick="showKidView()" class="btn">Student View</button>
+            <button onclick="showParentView()" class="btn">Parent View</button>
+        </div>
+    </div>
+
+    <div id="kidView">
+        <div id="testContainer" style="display: none;">
+            <div class="timer" id="timer">Time remaining: 5:00</div>
+            <div class="question-container">
+                <h2>Question <span id="currentQuestionNum">1</span>/10</h2>
+                <p id="questionText"></p>
+                <input type="number" id="answerInput" class="answer-input">
+            </div>
+            <div class="navigation">
+                <button onclick="previousQuestion()" class="btn" id="prevBtn">Previous</button>
+                <button onclick="nextQuestion()" class="btn" id="nextBtn">Next</button>
+                <button onclick="submitTest()" class="btn" id="submitBtn" style="display: none;">Submit Test</button>
+            </div>
+        </div>
+        <div id="startContainer">
+            <button onclick="startTest()" class="btn">Start New Test</button>
+        </div>
+    </div>
+
+    <div id="parentView" style="display: none;">
+        <h2>Test History</h2>
+        <button onclick="clearHistory()" class="btn">Clear History</button>
+        <div id="testHistory"></div>
+    </div>
+
+    <script>
+        let currentTest = {
+            questions: [],
+            answers: [],
+            userAnswers: [],
+            startTime: null,
+            endTime: null
+        };
+        let currentQuestionIndex = 0;
+        let timer = null;
+
+        function generateQuestion() {
+            const operations = ['+', '-', '*', '/'];
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+            let num1, num2;
+
+            switch(operation) {
+                case '+':
+                case '-':
+                    num1 = Math.floor(Math.random() * 900) + 100; // 100-999
+                    num2 = Math.floor(Math.random() * 900) + 100;
+                    break;
+                case '*':
+                    // Ensure product is less than 1000
+                    num1 = Math.floor(Math.random() * 20) + 1; // 1-20
+                    num2 = Math.floor(Math.random() * 20) + 1;
+                    break;
+                case '/':
+                    // Ensure division results in an integer
+                    num2 = Math.floor(Math.random() * 20) + 1; // 1-20
+                    num1 = num2 * (Math.floor(Math.random() * 20) + 1); // Ensures integer result
+                    break;
+            }
+
+            // For subtraction, ensure larger number comes first
+            if (operation === '-' && num2 > num1) {
+                [num1, num2] = [num2, num1];
+            }
+
+            const question = `${num1} ${operation} ${num2}`;
+            let answer;
+            switch(operation) {
+                case '+': answer = num1 + num2; break;
+                case '-': answer = num1 - num2; break;
+                case '*': answer = num1 * num2; break;
+                case '/': answer = num1 / num2; break;
+            }
+            return { question, answer };
+        }
+
+        function startTest() {
+            currentTest = {
+                questions: [],
+                answers: [],
+                userAnswers: new Array(10).fill(''),
+                startTime: new Date(),
+                endTime: null
+            };
+
+            // Generate 10 questions
+            for (let i = 0; i < 10; i++) {
+                const { question, answer } = generateQuestion();
+                currentTest.questions.push(question);
+                currentTest.answers.push(answer);
+            }
+
+            currentQuestionIndex = 0;
+            document.getElementById('testContainer').style.display = 'block';
+            document.getElementById('startContainer').style.display = 'none';
+            showQuestion();
+            startTimer();
+        }
+
+        function showQuestion() {
+            document.getElementById('currentQuestionNum').textContent = currentQuestionIndex + 1;
+            document.getElementById('questionText').textContent = currentTest.questions[currentQuestionIndex];
+            document.getElementById('answerInput').value = currentTest.userAnswers[currentQuestionIndex];
+            document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+            document.getElementById('nextBtn').textContent = currentQuestionIndex === 9 ? 'Finish' : 'Next';
+            document.getElementById('submitBtn').style.display = currentQuestionIndex === 9 ? 'inline' : 'none';
+            document.getElementById('answerInput').focus();
+        }
+
+        function nextQuestion() {
+            currentTest.userAnswers[currentQuestionIndex] = document.getElementById('answerInput').value;
+            if (currentQuestionIndex < 9) {
+                currentQuestionIndex++;
+                showQuestion();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentTest.userAnswers[currentQuestionIndex] = document.getElementById('answerInput').value;
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        }
+
+        function startTimer() {
+            let timeLeft = 300; // 5 minutes in seconds
+            const timerElement = document.getElementById('timer');
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    submitTest();
+                }
+            }, 1000);
+        }
+
+        function submitTest() {
+            clearInterval(timer);
+            currentTest.userAnswers[currentQuestionIndex] = document.getElementById('answerInput').value;
+            currentTest.endTime = new Date();
+            
+            // Calculate score
+            let score = 0;
+            for (let i = 0; i < 10; i++) {
+                if (parseInt(currentTest.userAnswers[i]) === currentTest.answers[i]) {
+                    score++;
+                }
+            }
+
+            // Save to local storage
+            const testHistory = JSON.parse(localStorage.getItem('testHistory') || '[]');
+            testHistory.push({
+                ...currentTest,
+                score,
+                timeTaken: (currentTest.endTime - currentTest.startTime) / 1000
+            });
+            localStorage.setItem('testHistory', JSON.stringify(testHistory));
+
+            // Show results
+            document.getElementById('testContainer').style.display = 'none';
+            document.getElementById('startContainer').style.display = 'block';
+            alert(`Test completed!\nScore: ${score}/10\nTime taken: ${Math.round((currentTest.endTime - currentTest.startTime) / 1000)} seconds`);
+        }
+
+        function showKidView() {
+            document.getElementById('kidView').style.display = 'block';
+            document.getElementById('parentView').style.display = 'none';
+        }
+
+        function showParentView() {
+            document.getElementById('kidView').style.display = 'none';
+            document.getElementById('parentView').style.display = 'block';
+            displayTestHistory();
+        }
+
+        function displayTestHistory() {
+            const testHistory = JSON.parse(localStorage.getItem('testHistory') || '[]');
+            const historyContainer = document.getElementById('testHistory');
+            
+            if (testHistory.length === 0) {
+                historyContainer.innerHTML = '<p>No tests taken yet.</p>';
+                return;
+            }
+
+            let html = '<table><tr><th>Date</th><th>Score</th><th>Time (s)</th><th>Details</th></tr>';
+            testHistory.forEach((test, index) => {
+                html += `
+                    <tr>
+                        <td>${new Date(test.startTime).toLocaleString()}</td>
+                        <td>${test.score}/10</td>
+                        <td>${Math.round(test.timeTaken)}</td>
+                        <td>
+                            <table>
+                                <tr><th>Question</th><th>Student Answer</th><th>Correct Answer</th></tr>
+                                ${test.questions.map((q, i) => `
+                                    <tr class="${parseInt(test.userAnswers[i]) === test.answers[i] ? 'correct' : 'incorrect'}">
+                                        <td>${q}</td>
+                                        <td>${test.userAnswers[i]}</td>
+                                        <td>${test.answers[i]}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += '</table>';
+            historyContainer.innerHTML = html;
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all test history?')) {
+                localStorage.removeItem('testHistory');
+                displayTestHistory();
+            }
+        }
+
+        // Handle enter key in answer input
+        document.getElementById('answerInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (currentQuestionIndex === 9) {
+                    submitTest();
+                } else {
+                    nextQuestion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

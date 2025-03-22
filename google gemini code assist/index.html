@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+        .question {
+            margin-bottom: 20px;
+        }
+        .navigation {
+            margin-top: 20px;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .result-table th, .result-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Math Test</h1>
+            <div>
+                <button onclick="showScreen('kid')">Kid</button>
+                <button onclick="showScreen('parent')">Parent</button>
+            </div>
+        </div>
+
+        <div id="kid-screen" class="screen active">
+            <h2>Kid Screen</h2>
+            <div id="test-area">
+                <div id="question-container" class="question"></div>
+                <input type="number" id="answer-input">
+                <div class="navigation">
+                    <button id="prev-btn" onclick="prevQuestion()" disabled>Previous</button>
+                    <button id="next-btn" onclick="nextQuestion()">Next</button>
+                    <button id="submit-btn" onclick="submitTest()" style="display: none;">Submit</button>
+                </div>
+                <div id="timer">Time Left: 5:00</div>
+            </div>
+            <div id="result-area" style="display: none;">
+                <h2>Test Results</h2>
+                <p>Score: <span id="score"></span></p>
+                <p>Time Taken: <span id="time-taken"></span></p>
+                <table id="result-table" class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Your Answer</th>
+                            <th>Correct Answer</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="parent-screen" class="screen">
+            <h2>Parent Screen</h2>
+            <button onclick="clearLocalStorage()">Clear Data</button>
+            <div id="parent-results"></div>
+        </div>
+    </div>
+
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let answers = [];
+        let startTime;
+        let timerInterval;
+        const testDuration = 5 * 60; // 5 minutes in seconds
+        let timeLeft = testDuration;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId + '-screen').classList.add('active');
+            if (screenId === 'parent') {
+                loadParentResults();
+            }
+        }
+
+        function generateQuestion() {
+            const operations = ['+', '-', '*', '/'];
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+            let num1 = Math.floor(Math.random() * 199) + 101; // Number between 101 and 300
+            let num2 = Math.floor(Math.random() * 199) + 101; // Number between 101 and 300
+
+            if (operation === '*') {
+                num1 = Math.floor(Math.random() * 9) + 1;
+                num2 = Math.floor(Math.random() * 9) + 1;
+                while (num1 * num2 > 100) {
+                    num1 = Math.floor(Math.random() * 9) + 1;
+                    num2 = Math.floor(Math.random() * 9) + 1;
+                }
+            }
+            if (operation === '/') {
+                num2 = Math.floor(Math.random() * 9) + 1;
+                num1 = num2 * (Math.floor(Math.random() * 9) + 1);
+            }
+
+            let question = `${num1} ${operation} ${num2}`;
+            let correctAnswer;
+            switch (operation) {
+                case '+':
+                    correctAnswer = num1 + num2;
+                    break;
+                case '-':
+                    correctAnswer = num1 - num2;
+                    break;
+                case '*':
+                    correctAnswer = num1 * num2;
+                    break;
+                case '/':
+                    correctAnswer = num1 / num2;
+                    break;
+            }
+            return { question, correctAnswer };
+        }
+
+        function startTest() {
+            questions = [];
+            answers = [];
+            currentQuestionIndex = 0;
+            timeLeft = testDuration;
+            startTime = new Date();
+            for (let i = 0; i < 10; i++) {
+                questions.push(generateQuestion());
+                answers.push(null);
+            }
+            showQuestion();
+            startTimer();
+        }
+
+        function showQuestion() {
+            const questionContainer = document.getElementById('question-container');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const answerInput = document.getElementById('answer-input');
+
+            questionContainer.textContent = `Question ${currentQuestionIndex + 1}: ${questions[currentQuestionIndex].question} = ?`;
+            answerInput.value = answers[currentQuestionIndex] !== null ? answers[currentQuestionIndex] : '';
+
+            prevBtn.disabled = currentQuestionIndex === 0;
+            nextBtn.disabled = currentQuestionIndex === questions.length - 1;
+            submitBtn.style.display = currentQuestionIndex === questions.length - 1 ? 'block' : 'none';
+            nextBtn.style.display = currentQuestionIndex === questions.length - 1 ? 'none' : 'block';
+        }
+
+        function nextQuestion() {
+            answers[currentQuestionIndex] = document.getElementById('answer-input').value;
+            currentQuestionIndex++;
+            showQuestion();
+        }
+
+        function prevQuestion() {
+            answers[currentQuestionIndex] = document.getElementById('answer-input').value;
+            currentQuestionIndex--;
+            showQuestion();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                document.getElementById('timer').textContent = `Time Left: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                if (timeLeft <= 0) {
+                    submitTest();
+                }
+            }, 1000);
+        }
+
+        function submitTest() {
+            clearInterval(timerInterval);
+            answers[currentQuestionIndex] = document.getElementById('answer-input').value;
+            const endTime = new Date();
+            const timeTaken = Math.round((endTime - startTime) / 1000);
+            let score = 0;
+            const results = [];
+            for (let i = 0; i < questions.length; i++) {
+                const isCorrect = parseInt(answers[i]) === questions[i].correctAnswer;
+                if (isCorrect) {
+                    score++;
+                }
+                results.push({
+                    question: questions[i].question,
+                    userAnswer: answers[i],
+                    correctAnswer: questions[i].correctAnswer,
+                    isCorrect: isCorrect
+                });
+            }
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('time-taken').textContent = `${Math.floor(timeTaken / 60)}:${(timeTaken % 60).toString().padStart(2, '0')}`;
+
+            const resultTableBody = document.querySelector('#result-table tbody');
+            resultTableBody.innerHTML = '';
+            results.forEach(result => {
+                const row = resultTableBody.insertRow();
+                const questionCell = row.insertCell();
+                const userAnswerCell = row.insertCell();
+                const correctAnswerCell = row.insertCell();
+                const resultCell = row.insertCell();
+
+                questionCell.textContent = result.question;
+                userAnswerCell.textContent = result.userAnswer;
+                correctAnswerCell.textContent = result.correctAnswer;
+                resultCell.textContent = result.isCorrect ? 'Correct' : 'Incorrect';
+                resultCell.classList.add(result.isCorrect ? 'correct' : 'incorrect');
+            });
+
+            document.getElementById('test-area').style.display = 'none';
+            document.getElementById('result-area').style.display = 'block';
+
+            const testData = {
+                score: score,
+                timeTaken: timeTaken,
+                results: results,
+                timestamp: new Date().toLocaleString()
+            };
+            saveTestData(testData);
+        }
+
+        function saveTestData(testData) {
+            let storedData = localStorage.getItem('testResults');
+            let testResults = storedData ? JSON.parse(storedData) : [];
+            testResults.push(testData);
+            localStorage.setItem('testResults', JSON.stringify(testResults));
+        }
+
+        function loadParentResults() {
+            const parentResultsDiv = document.getElementById('parent-results');
+            parentResultsDiv.innerHTML = '';
+            const storedData = localStorage.getItem('testResults');
+            if (storedData) {
+                const testResults = JSON.parse(storedData);
+                testResults.forEach((test, index) => {
+                    const testDiv = document.createElement('div');
+                    testDiv.innerHTML = `<h3>Test ${index + 1} - ${test.timestamp}</h3>
+                                         <p>Score: ${test.score}</p>
+                                         <p>Time Taken: ${Math.floor(test.timeTaken / 60)}:${(test.timeTaken % 60).toString().padStart(2, '0')}</p>`;
+                    const table = document.createElement('table');
+                    table.classList.add('result-table');
+                    table.innerHTML = `<thead>
+                                        <tr>
+                                            <th>Question</th>
+                                            <th>Your Answer</th>
+                                            <th>Correct Answer</th>
+                                            <th>Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>`;
+                    const tbody = table.querySelector('tbody');
+                    test.results.forEach(result => {
+                        const row = tbody.insertRow();
+                        const questionCell = row.insertCell();
+                        const userAnswerCell = row.insertCell();
+                        const correctAnswerCell = row.insertCell();
+                        const resultCell = row.insertCell();
+
+                        questionCell.textContent = result.question;
+                        userAnswerCell.textContent = result.userAnswer;
+                        correctAnswerCell.textContent = result.correctAnswer;
+                        resultCell.textContent = result.isCorrect ? 'Correct' : 'Incorrect';
+                        resultCell.classList.add(result.isCorrect ? 'correct' : 'incorrect');
+                    });
+                    testDiv.appendChild(table);
+                    parentResultsDiv.appendChild(testDiv);
+                });
+            } else {
+                parentResultsDiv.textContent = 'No test results found.';
+            }
+        }
+
+        function clearLocalStorage() {
+            localStorage.removeItem('testResults');
+            loadParentResults();
+        }
+
+        startTest();
+    </script>
+</body>
+</html>

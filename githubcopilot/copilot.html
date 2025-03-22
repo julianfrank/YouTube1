@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Skills Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .hidden { display: none; }
+        .correct { color: green; }
+        .incorrect { color: red; }
+        button { margin: 5px; }
+    </style>
+</head>
+<body>
+    <header>
+        <button id="kidScreenBtn">Kid Screen</button>
+        <button id="parentScreenBtn">Parent Screen</button>
+    </header>
+
+    <section id="kidScreen">
+        <h1>Math Test</h1>
+        <div id="questionContainer">
+            <p id="question"></p>
+            <input type="number" id="answer" />
+            <button id="prevQuestion">Previous</button>
+            <button id="nextQuestion">Next</button>
+        </div>
+        <div id="resultContainer" class="hidden">
+            <h2>Test Results</h2>
+            <p id="score"></p>
+            <p id="timeTaken"></p>
+            <ul id="resultDetails"></ul>
+        </div>
+    </section>
+
+    <section id="parentScreen" class="hidden">
+        <h1>Test Reports</h1>
+        <button id="clearReports">Clear Reports</button>
+        <ul id="reports"></ul>
+    </section>
+
+    <script>
+        const kidScreen = document.getElementById('kidScreen');
+        const parentScreen = document.getElementById('parentScreen');
+        const kidScreenBtn = document.getElementById('kidScreenBtn');
+        const parentScreenBtn = document.getElementById('parentScreenBtn');
+        const questionContainer = document.getElementById('questionContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const questionEl = document.getElementById('question');
+        const answerEl = document.getElementById('answer');
+        const prevQuestionBtn = document.getElementById('prevQuestion');
+        const nextQuestionBtn = document.getElementById('nextQuestion');
+        const scoreEl = document.getElementById('score');
+        const timeTakenEl = document.getElementById('timeTaken');
+        const resultDetailsEl = document.getElementById('resultDetails');
+        const reportsEl = document.getElementById('reports');
+        const clearReportsBtn = document.getElementById('clearReports');
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let answers = [];
+        let startTime;
+        const maxTime = 5 * 60 * 1000; // 5 minutes
+
+        function generateQuestions() {
+            questions = [];
+            for (let i = 0; i < 10; i++) {
+                const num1 = Math.floor(Math.random() * 100) + 1;
+                const num2 = Math.floor(Math.random() * 100) + 1;
+                const operations = ['+', '-', '*', '/'];
+                const operation = operations[Math.floor(Math.random() * operations.length)];
+                let question, answer;
+
+                if (operation === '+') {
+                    question = `${num1} + ${num2}`;
+                    answer = num1 + num2;
+                } else if (operation === '-') {
+                    question = `${num1} - ${num2}`;
+                    answer = num1 - num2;
+                } else if (operation === '*') {
+                    question = `${num1} * ${num2}`;
+                    answer = num1 * num2;
+                    if (answer >= 100) {
+                        i--;
+                        continue;
+                    }
+                } else if (operation === '/') {
+                    answer = Math.floor(num1 / num2);
+                    question = `${answer * num2} / ${num2}`;
+                }
+
+                questions.push({ question, answer });
+            }
+        }
+
+        function startTest() {
+            generateQuestions();
+            currentQuestionIndex = 0;
+            answers = Array(10).fill(null);
+            startTime = Date.now();
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (Date.now() - startTime > maxTime) {
+                endTest();
+                return;
+            }
+            const current = questions[currentQuestionIndex];
+            questionEl.textContent = current.question;
+            answerEl.value = answers[currentQuestionIndex] || '';
+        }
+
+        function saveAnswer() {
+            const value = parseInt(answerEl.value, 10);
+            if (!isNaN(value)) {
+                answers[currentQuestionIndex] = value;
+            }
+        }
+
+        function endTest() {
+            questionContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+            const timeTaken = Math.min(Date.now() - startTime, maxTime);
+            const correctAnswers = questions.filter((q, i) => q.answer === answers[i]).length;
+            scoreEl.textContent = `Score: ${correctAnswers} / 10`;
+            timeTakenEl.textContent = `Time Taken: ${(timeTaken / 1000).toFixed(2)} seconds`;
+
+            resultDetailsEl.innerHTML = questions.map((q, i) => {
+                const isCorrect = q.answer === answers[i];
+                return `<li class="${isCorrect ? 'correct' : 'incorrect'}">
+                    Q: ${q.question}, Your Answer: ${answers[i]}, Correct Answer: ${q.answer}
+                </li>`;
+            }).join('');
+
+            saveReport(correctAnswers, timeTaken);
+        }
+
+        function saveReport(score, timeTaken) {
+            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+            reports.push({ questions, answers, score, timeTaken });
+            localStorage.setItem('reports', JSON.stringify(reports));
+        }
+
+        function loadReports() {
+            const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+            reportsEl.innerHTML = reports.map((report, index) => `
+                <li>
+                    Test ${index + 1}: Score: ${report.score}, Time: ${(report.timeTaken / 1000).toFixed(2)} seconds
+                    <ul>
+                        ${report.questions.map((q, i) => `
+                            <li class="${q.answer === report.answers[i] ? 'correct' : 'incorrect'}">
+                                Q: ${q.question}, Your Answer: ${report.answers[i]}, Correct Answer: ${q.answer}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </li>
+            `).join('');
+        }
+
+        function clearReports() {
+            localStorage.removeItem('reports');
+            loadReports();
+        }
+
+        kidScreenBtn.addEventListener('click', () => {
+            kidScreen.classList.remove('hidden');
+            parentScreen.classList.add('hidden');
+            startTest();
+        });
+
+        parentScreenBtn.addEventListener('click', () => {
+            parentScreen.classList.remove('hidden');
+            kidScreen.classList.add('hidden');
+            loadReports();
+        });
+
+        prevQuestionBtn.addEventListener('click', () => {
+            saveAnswer();
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        });
+
+        nextQuestionBtn.addEventListener('click', () => {
+            saveAnswer();
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion();
+            } else {
+                endTest();
+            }
+        });
+
+        clearReportsBtn.addEventListener('click', clearReports);
+
+        // Initialize
+        startTest();
+    </script>
+</body>
+</html>
